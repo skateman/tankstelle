@@ -18,26 +18,20 @@ export function createApp(): Hono {
   const app = new Hono();
 
   app.use('*', logger());
-  // CORS is owned entirely by the app (single source of truth — do NOT also
-  // enable App Service platform CORS, or responses get duplicate
-  // Access-Control-Allow-Origin headers that browsers reject). When the API is
-  // fronted by Easy Auth, the platform passes the unauthenticated CORS preflight
-  // (OPTIONS) through to here by design, so this middleware answers it; the
-  // actual GET/POST is validated by Easy Auth before it reaches the app. Auth
-  // uses Bearer tokens (not cookies), so `credentials` is intentionally off.
-  // maxAge lets browsers cache the preflight to cut repeat OPTIONS round-trips.
-  app.use(
-    '/api/*',
-    cors({
-      origin: corsOrigins,
-      allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Authorization', 'Content-Type'],
-      maxAge: 3600,
-    }),
-  );
+  // Applied only when origins are configured; otherwise the host owns CORS
+  // (App Service platform CORS in prod) or it's same-origin local dev.
+  if (corsOrigins) {
+    app.use(
+      '/api/*',
+      cors({
+        origin: corsOrigins,
+        allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowHeaders: ['Authorization', 'Content-Type'],
+        maxAge: 3600,
+      }),
+    );
+  }
 
-  // Owner authorization: guards every /api/* route except /api/health. No-op when
-  // OWNER_OID is absent (local dev). Trusts the Easy Auth principal header.
   app.use('/api/*', createAuthMiddleware());
 
   app.get('/api/health', (c) =>

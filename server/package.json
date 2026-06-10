@@ -1,6 +1,6 @@
 {
   "name": "@skateman/tankstelle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tankstelle fueling-tracker API (Hono app + Azure Table Storage + Azure OpenAI OCR), packaged for embedding in an Azure Functions host.",
   "license": "MIT",
   "type": "module",

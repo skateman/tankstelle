@@ -54,11 +54,11 @@ const schema = z.object({
   // loop (secret owner-oid → env var OWNER_OID). Non-secret identifier.
   OWNER_OID: z.string().optional(), // the owner's user object id
 
-  // Fail-closed switch. When 'true', the API refuses every request (except
-  // /api/health) with 503 unless auth is fully configured. Set this in any
-  // deployed environment so a missing/misconfigured Entra setting can never
-  // silently expose the API. Compared literally against 'true' so that the
-  // string 'false' disables it (unlike z.coerce.boolean()).
+  // Fail-closed switch. When 'true', the API refuses every request with 503
+  // unless auth is fully configured. Set this in any deployed environment so a
+  // missing/misconfigured Entra setting can never silently expose the API.
+  // Compared literally against 'true' so that the string 'false' disables it
+  // (unlike z.coerce.boolean()).
   REQUIRE_AUTH: z.string().optional(),
 });
 
@@ -112,11 +112,12 @@ export const storageMode: 'connection_string' | 'managed_identity' =
 export const isAuthConfigured = Boolean(env.OWNER_OID);
 
 // Fail-closed flag. When set, the API must have auth fully configured or it
-// refuses all non-health requests with 503. Deployed environments set this so
-// a dropped Entra App Setting can never silently open the API to the world.
+// refuses all requests with 503. Deployed environments set this so a dropped
+// Entra App Setting can never silently open the API to the world.
 export const isAuthRequired = env.REQUIRE_AUTH === 'true';
 
-// Allowed CORS origins as a list, or '*' when unconfigured.
-export const corsOrigins: string[] | '*' = env.CORS_ALLOWED_ORIGINS
+// Allowed CORS origins, or null when unset (no CORS headers emitted — the host
+// owns CORS in prod, or it's same-origin local dev).
+export const corsOrigins: string[] | null = env.CORS_ALLOWED_ORIGINS
   ? env.CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
-  : '*';
+  : null;

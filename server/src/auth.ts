@@ -1,26 +1,17 @@
 // Microsoft Entra ID authorization for the Tankstelle API.
 //
-// Token *authentication* (signature, issuer, audience, expiry) is performed by
-// the Azure App Service Authentication ("Easy Auth") platform layer BEFORE the
-// function executes — unauthenticated requests are rejected with 401 by the
-// platform and never reach this code (so we don't pay for them). Easy Auth then
-// injects the validated identity as the base64-encoded `x-ms-client-principal`
-// header (the token's claims as JSON).
+// Token authentication (signature, issuer, audience, expiry) is performed by the
+// Azure App Service Authentication ("Easy Auth") platform layer, which injects the
+// validated identity as the base64 `x-ms-client-principal` header. This middleware
+// only authorizes: it requires the access_as_user scope and that the `oid` claim
+// equals OWNER_OID (single-user lock).
 //
-// This middleware performs *authorization* on top of that platform validation:
-//   - the principal carries our delegated scope (access_as_user) — rejects an
-//     ID token replayed as an access token
-//   - the `oid` claim equals OWNER_OID — locks the API to a single user
-//
-// Auth is enforced only when OWNER_OID is configured (see env.isAuthConfigured).
-// In local dev (OWNER_OID unset) the middleware is a no-op so the app stays
-// usable without any platform in front. Any non-local deployment MUST sit behind
-// Easy Auth (or a proxy that injects a trusted `x-ms-client-principal` header).
+// Enforced only when OWNER_OID is configured; unset ⇒ no-op (local dev). Any
+// non-local deployment MUST sit behind Easy Auth (or a proxy that injects a
+// trusted `x-ms-client-principal` header).
 
 import type { MiddlewareHandler } from 'hono';
 import { env, isAuthConfigured, isAuthRequired } from './env.js';
-
-const HEALTH_PATH = '/api/health';
 
 // The delegated scope the SPA requests (api://spa/access_as_user). Access tokens
 // carry it in `scp`; ID tokens never do. Requiring it rejects an ID token being
@@ -57,26 +48,21 @@ function getClaim(p: ClientPrincipal, ...types: string[]): string | undefined {
 export function createAuthMiddleware(): MiddlewareHandler {
   if (!isAuthConfigured) {
     // Fail closed: a deployed environment demanded auth but it isn't configured.
-    // Refuse everything except health rather than silently serving open.
+    // Refuse everything rather than silently serving open.
     if (isAuthRequired) {
-      return async (c, next) => {
-        if (c.req.path === HEALTH_PATH) return next();
-        return c.json(
+      return async (c) =>
+        c.json(
           {
             error: 'auth_unavailable',
             message: 'Authentication is required but not configured on the server.',
           },
           503,
         );
-      };
     }
     return async (_c, next) => next();
   }
 
   return async (c, next) => {
-    // Health stays open for SWA/monitoring probes (also excluded in Easy Auth).
-    if (c.req.path === HEALTH_PATH) return next();
-
     const header = c.req.header(PRINCIPAL_HEADER);
     if (!header) {
       // Easy Auth should have injected this. Its absence means the platform auth
