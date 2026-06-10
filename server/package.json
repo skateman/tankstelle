@@ -1,0 +1,51 @@
+{
+  "name": "@skateman/tankstelle",
+  "version": "0.1.0",
+  "description": "Tankstelle fueling-tracker API (Hono app + Azure Table Storage + Azure OpenAI OCR), packaged for embedding in an Azure Functions host.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/lib.js",
+  "types": "dist/lib.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib.d.ts",
+      "import": "./dist/lib.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skateman/tankstelle.git",
+    "directory": "server"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file=../.env src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file=../.env dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "azurite": "azurite --silent --location ./.azurite",
+    "import:motomoshi": "tsx --env-file=../.env src/scripts/import-motomoshi.ts",
+    "ocr:test": "tsx --env-file=../.env src/scripts/ocr-test.ts"
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.3.1",
+    "@azure/identity": "^3.4.2",
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.1",
+    "csv-parse": "^6.2.1",
+    "hono": "^4.6.10",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "azurite": "^3.35.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

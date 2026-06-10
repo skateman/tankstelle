@@ -1,0 +1,21 @@
+{
+  "name": "tankstelle",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "web",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n azurite,server,web -c yellow,blue,green \"npm -w server run azurite\" \"npm -w server run dev\" \"npm -w web run dev\"",
+    "build": "npm -w server run build && npm -w web run build",
+    "typecheck": "npm -w server run typecheck && npm -w web run typecheck",
+    "start": "npm -w server run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "typescript": "^5.6.3"
+  }
+}

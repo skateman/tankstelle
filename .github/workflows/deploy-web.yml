@@ -1,0 +1,46 @@
+# Builds the Tankstelle PWA and deploys it to its Azure Static Web App.
+#
+# The VITE_* values are inlined into the JS bundle at build time, so they must be
+# present here. Set them as repository secrets (Settings → Secrets and variables →
+# Actions → Secrets):
+#   VITE_ENTRA_TENANT_ID   your Entra tenant id
+#   VITE_ENTRA_CLIENT_ID   the shared SPA app registration client id
+#   VITE_API_SCOPE         api://spa/access_as_user
+#   VITE_API_BASE          https://fn-nexus.azurewebsites.net/api/tankstelle
+#   VITE_REDIRECT_URI      optional; the PWA's own origin (defaults to the page origin if unset)
+#
+# The SWA deploy token is the secret AZURE_STATIC_WEB_APPS_API_TOKEN — copy it from
+# Key Vault (secret `swa-tankstelle-token`).
+name: Deploy PWA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm -w web run build
+        env:
+          VITE_ENTRA_TENANT_ID: ${{ secrets.VITE_ENTRA_TENANT_ID }}
+          VITE_ENTRA_CLIENT_ID: ${{ secrets.VITE_ENTRA_CLIENT_ID }}
+          VITE_API_SCOPE: ${{ secrets.VITE_API_SCOPE }}
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          VITE_REDIRECT_URI: ${{ secrets.VITE_REDIRECT_URI }}
+      - uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: web/dist
+          skip_app_build: true
+          skip_api_build: true

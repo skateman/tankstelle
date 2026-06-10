@@ -1,0 +1,34 @@
+# Publishes @skateman/tankstelle to the public npm registry on a version tag,
+# using npm Trusted Publishing (OIDC) — no NPM_TOKEN secret required.
+#
+# One-time setup (see README): the package must already exist on npm, and a Trusted
+# Publisher must be configured on npmjs.com pointing at this repo + workflow.
+#
+# Usage:
+#   npm version patch -w server   # bumps server/package.json
+#   git tag v0.1.0 && git push origin v0.1.0
+name: Publish server package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # Trusted Publishing requires npm >= 11.5.1; Node 22 ships npm 10.
+      - run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm -w server run build
+      - run: npm publish -w server --access public
