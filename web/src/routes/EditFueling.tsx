@@ -76,7 +76,8 @@ export default function EditFueling() {
     setFormError(null);
 
     const num = (s: string, name: string) => {
-      const n = Number(s);
+      // Accept a comma decimal separator (some mobile decimal keypads insert ',').
+      const n = Number(s.replace(',', '.').trim());
       if (!Number.isFinite(n) || n <= 0) throw new Error(`${name} must be a positive number`);
       return n;
     };
@@ -157,9 +158,8 @@ export default function EditFueling() {
           <label className="label">Liters</label>
           <input
             className="input"
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.01"
             value={liters}
             onChange={(e) => setLiters(e.target.value)}
             required
@@ -169,9 +169,8 @@ export default function EditFueling() {
           <label className="label">Total ({currency})</label>
           <input
             className="input"
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.01"
             value={totalPrice}
             onChange={(e) => setTotalPrice(e.target.value)}
             required
@@ -181,9 +180,8 @@ export default function EditFueling() {
           <label className="label">Price / L</label>
           <input
             className="input"
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.001"
             value={pricePerLiter}
             onChange={(e) => setPricePerLiter(e.target.value)}
             placeholder="auto"
@@ -203,9 +201,8 @@ export default function EditFueling() {
           <label className="label">Odometer (km)</label>
           <input
             className="input"
-            type="number"
+            type="text"
             inputMode="numeric"
-            step="1"
             value={odometerKm}
             onChange={(e) => setOdometerKm(e.target.value)}
             required

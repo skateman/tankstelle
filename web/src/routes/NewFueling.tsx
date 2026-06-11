@@ -144,7 +144,8 @@ export default function NewFueling() {
   }
 
   function num(s: string, name: string): number {
-    const n = Number(s);
+    // Accept a comma decimal separator (some mobile decimal keypads insert ',').
+    const n = Number(s.replace(',', '.').trim());
     if (!Number.isFinite(n) || n <= 0) throw new Error(`${name} must be a positive number`);
     return n;
   }
@@ -310,9 +311,8 @@ export default function NewFueling() {
               <label className="label">Odometer (km)</label>
               <input
                 className="input"
-                type="number"
+                type="text"
                 inputMode="numeric"
-                step="1"
                 value={odometerKm}
                 onChange={(e) => setOdometerKm(e.target.value)}
                 required
@@ -322,9 +322,8 @@ export default function NewFueling() {
               <label className="label">Price / L</label>
               <input
                 className="input"
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.001"
                 value={pricePerLiter}
                 onChange={(e) => setPricePerLiter(e.target.value)}
                 required
@@ -334,9 +333,8 @@ export default function NewFueling() {
               <label className="label">Amount (L)</label>
               <input
                 className="input"
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="0.01"
                 value={liters}
                 onChange={(e) => setLiters(e.target.value)}
                 required
@@ -362,6 +360,12 @@ export default function NewFueling() {
         ← Back
       </button>
 
+      {ocrError && (
+        <p className="text-sm text-rose-400">
+          Scan failed: {ocrError}. Enter the values manually below.
+        </p>
+      )}
+
       <section className="space-y-2">
         <div>
           <label className="label">Vehicle</label>
@@ -373,9 +377,8 @@ export default function NewFueling() {
             <label className="label">Liters</label>
             <input
               className="input"
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
               value={liters}
               onChange={(e) => setLiters(e.target.value)}
               required
@@ -385,9 +388,8 @@ export default function NewFueling() {
             <label className="label">Total ({currency})</label>
             <input
               className="input"
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.01"
               value={totalPrice}
               onChange={(e) => setTotalPrice(e.target.value)}
               required
@@ -397,9 +399,8 @@ export default function NewFueling() {
             <label className="label">Price / L</label>
             <input
               className="input"
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.001"
               value={pricePerLiter}
               onChange={(e) => setPricePerLiter(e.target.value)}
               placeholder="auto"
@@ -419,9 +420,8 @@ export default function NewFueling() {
             <label className="label">Odometer (km)</label>
             <input
               className="input"
-              type="number"
+              type="text"
               inputMode="numeric"
-              step="1"
               value={odometerKm}
               onChange={(e) => setOdometerKm(e.target.value)}
               required
