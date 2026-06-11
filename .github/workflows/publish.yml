@@ -1,34 +1,72 @@
-# Publishes @skateman/tankstelle to the public npm registry on a version tag,
-# using npm Trusted Publishing (OIDC) — no NPM_TOKEN secret required.
-#
-# One-time setup (see README): the package must already exist on npm, and a Trusted
-# Publisher must be configured on npmjs.com pointing at this repo + workflow.
-#
-# Usage:
-#   npm version patch -w server   # bumps server/package.json
-#   git tag v0.1.0 && git push origin v0.1.0
+# Publishes @skateman/tankstelle to npm when server/package.json's version is
+# bumped on main: tags the commit (v<version>) and creates a GitHub release.
+# Requires a Trusted Publisher configured on npmjs.com (see README).
 name: Publish server package
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - 'server/package.json'
   workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write # required for npm Trusted Publishing (OIDC)
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read package version
+        id: ver
+        run: echo "version=$(node -p "require('./server/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if this version is already tagged
+        id: check
+        run: |
+          if git rev-parse "v${{ steps.ver.outputs.version }}" >/dev/null 2>&1; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.release == 'true'
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      # Trusted Publishing requires npm >= 11.5.1; Node 22 ships npm 10.
+
+      # Trusted Publishing needs npm >= 11.5.1; Node 22 ships npm 10.
       - run: npm install -g npm@latest
+        if: steps.check.outputs.release == 'true'
+
       - run: npm ci
+        if: steps.check.outputs.release == 'true'
+
       - run: npm -w server run build
-      - run: npm publish -w server --access public
+        if: steps.check.outputs.release == 'true'
+
+      # Idempotent: skip publish if this version is already on npm.
+      - name: Publish to npm
+        if: steps.check.outputs.release == 'true'
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          if npm view "@skateman/tankstelle@${VERSION}" version >/dev/null 2>&1; then
+            echo "@skateman/tankstelle@${VERSION} already on npm — skipping publish."
+          else
+            npm publish -w server --access public
+          fi
+
+      - name: Tag commit and create GitHub release
+        if: steps.check.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.ver.outputs.version }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes
