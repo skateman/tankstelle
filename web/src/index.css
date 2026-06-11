@@ -30,10 +30,31 @@ body {
     @apply btn bg-slate-800 text-slate-100 hover:bg-slate-700;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100
+    @apply min-h-[2.625rem] w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100
            placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none;
   }
   .label {
     @apply mb-1 block text-sm font-medium text-slate-300;
   }
+}
+
+/* Native date input: match the text inputs. WebKit otherwise renders the value
+   in a larger system font and centers it, with a dark (invisible) calendar icon. */
+.input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+}
+.input[type='date']::-webkit-datetime-edit,
+.input[type='date']::-webkit-datetime-edit-fields-wrapper,
+.input[type='date']::-webkit-datetime-edit-text,
+.input[type='date']::-webkit-datetime-edit-day-field,
+.input[type='date']::-webkit-datetime-edit-month-field,
+.input[type='date']::-webkit-datetime-edit-year-field {
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  padding: 0;
+}
+.input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
 }

@@ -229,7 +229,7 @@ export default function NewFueling() {
         // Non-blocking warnings: show but proceed.
         console.warn('fueling warnings', result.warnings);
       }
-      nav('/');
+      nav(`/vehicles/${vehicleId}`);
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes('odometer_regression') && !allowRegression) {
