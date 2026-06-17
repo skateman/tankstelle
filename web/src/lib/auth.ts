@@ -9,11 +9,7 @@
 //   VITE_API_SCOPE         e.g. api://tankstelle/access_as_user
 //   VITE_REDIRECT_URI      optional; defaults to window.location.origin
 
-import {
-  PublicClientApplication,
-  InteractionRequiredAuthError,
-  type AccountInfo,
-} from '@azure/msal-browser';
+import { PublicClientApplication, type AccountInfo } from '@azure/msal-browser';
 
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID as string | undefined;
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID as string | undefined;
@@ -40,6 +36,10 @@ const msal = isAuthEnabled
 
 let initialized = false;
 
+// Guards against a redirect loop if interactive re-auth itself can't produce a
+// usable token: we only auto-redirect once per tab session.
+const REAUTH_GUARD = 'tankstelle.reauth';
+
 /** Initialize MSAL and process any redirect response. Call once before render. */
 export async function initAuth(): Promise<void> {
   if (!msal || initialized) return;
@@ -47,6 +47,8 @@ export async function initAuth(): Promise<void> {
   const result = await msal.handleRedirectPromise();
   if (result?.account) {
     msal.setActiveAccount(result.account);
+    // A redirect completed successfully — clear the re-auth guard.
+    sessionStorage.removeItem(REAUTH_GUARD);
   } else {
     const accounts = msal.getAllAccounts();
     if (accounts.length > 0) msal.setActiveAccount(accounts[0]!);
@@ -65,6 +67,7 @@ export async function signIn(): Promise<void> {
 
 export async function signOut(): Promise<void> {
   if (!msal) return;
+  sessionStorage.removeItem(REAUTH_GUARD);
   await msal.logoutRedirect({ account: msal.getActiveAccount() ?? undefined });
 }
 
@@ -75,9 +78,15 @@ export async function getToken(): Promise<string | null> {
   if (!account) return null;
   try {
     const r = await msal.acquireTokenSilent({ scopes: [apiScope!], account });
+    sessionStorage.removeItem(REAUTH_GUARD);
     return r.accessToken;
-  } catch (e) {
-    if (e instanceof InteractionRequiredAuthError) {
+  } catch {
+    // Silent acquisition failed — e.g. the SPA refresh token hit its 24h limit
+    // and the hidden-iframe SSO is blocked by third-party-cookie restrictions.
+    // Recover by sending the user through an interactive redirect instead of
+    // leaving a dead 401. Only do this once per session to avoid a loop.
+    if (!sessionStorage.getItem(REAUTH_GUARD)) {
+      sessionStorage.setItem(REAUTH_GUARD, '1');
       await msal.acquireTokenRedirect({ scopes: [apiScope!], account });
     }
     return null;
