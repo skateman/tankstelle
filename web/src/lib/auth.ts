@@ -9,7 +9,11 @@
 //   VITE_API_SCOPE         e.g. api://tankstelle/access_as_user
 //   VITE_REDIRECT_URI      optional; defaults to window.location.origin
 
-import { PublicClientApplication, type AccountInfo } from '@azure/msal-browser';
+import {
+  CacheLookupPolicy,
+  PublicClientApplication,
+  type AccountInfo,
+} from '@azure/msal-browser';
 
 const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID as string | undefined;
 const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID as string | undefined;
@@ -77,14 +81,14 @@ export async function getToken(): Promise<string | null> {
   const account = msal.getActiveAccount();
   if (!account) return null;
   try {
-    const r = await msal.acquireTokenSilent({ scopes: [apiScope!], account });
+    const r = await msal.acquireTokenSilent({
+      scopes: [apiScope!],
+      account,
+      cacheLookupPolicy: CacheLookupPolicy.AccessTokenAndRefreshToken,
+    });
     sessionStorage.removeItem(REAUTH_GUARD);
     return r.accessToken;
   } catch {
-    // Silent acquisition failed — e.g. the SPA refresh token hit its 24h limit
-    // and the hidden-iframe SSO is blocked by third-party-cookie restrictions.
-    // Recover by sending the user through an interactive redirect instead of
-    // leaving a dead 401. Only do this once per session to avoid a loop.
     if (!sessionStorage.getItem(REAUTH_GUARD)) {
       sessionStorage.setItem(REAUTH_GUARD, '1');
       await msal.acquireTokenRedirect({ scopes: [apiScope!], account });
